@@ -116,4 +116,114 @@ def listar_contrasenas(contrasenas: dict, titulo: str = "CONTRASEÑAS ALMACENADA
         return
     
     print("{:<5} {:<25} {:<25} {:<20}".format("N°", "Servicio", "Usuario", "Fecha de creación"))
-    print("-
+    print("-" * 78)
+    
+    ids_mostradas = list(contrasenas.keys())
+    ids_mostradas.sort(key=lambda id: contrasenas[id]['servicio'].lower())
+
+    for i, id_entrada in enumerate(ids_mostradas, 1):
+        entrada = contrasenas[id_entrada]
+        print("{:<5} {:<25} {:<25} {:<20}".format(
+            i,
+            entrada['servicio'][:23] + '..' if len(entrada['servicio']) > 25 else entrada['servicio'],
+            entrada['usuario'][:23] + '..' if len(entrada['usuario']) > 25 else entrada['usuario'],
+            entrada['fecha_creacion']
+        ))
+    
+    if ids_mostradas:
+        print("-" * 78)
+        ver_detalle_contrasena(contrasenas, ids_mostradas)
+
+def buscar_contrasena(contrasenas: dict):
+    print("\n--- BUSCAR CONTRASEÑA ---")
+    termino = input("Ingresa el nombre del servicio a buscar: ").lower()
+    if not termino:
+        return
+    resultados = {}
+    for id_e, c in contrasenas.items():
+        if termino in c['servicio'].lower():
+            resultados[id_e] = c
+    
+    if resultados:
+        listar_contrasenas(resultados, "RESULTADOS DE LA BÚSQUEDA")
+    else:
+        print("No se encontraron contraseñas para ese servicio.")
+        input("\nPresiona Enter para continuar...")
+
+def eliminar_contrasena(contrasenas: dict, clave: bytes):
+    print("\n--- ELIMINAR CONTRASEÑA ---")
+    if not contrasenas:
+        print("No hay contraseñas para eliminar.")
+        return
+
+    print("Selecciona la contraseña a eliminar:")
+    
+    ids_mostradas = list(contrasenas.keys())
+    ids_mostradas.sort(key=lambda id: contrasenas[id]['servicio'].lower())
+
+    for i, id_entrada in enumerate(ids_mostradas, 1):
+        entrada = contrasenas[id_entrada]
+        print(f"{i}. {entrada['servicio']} ({entrada['usuario']})")
+
+    try:
+        seleccion_str = input("\nIngresa el número de la contraseña a eliminar (o '0' para cancelar): ")
+        if not seleccion_str: return
+        seleccion = int(seleccion_str)
+
+        if 0 < seleccion <= len(ids_mostradas):
+            id_a_eliminar = ids_mostradas[seleccion - 1]
+            servicio = contrasenas[id_a_eliminar]['servicio']
+            confirm = input(f"¿Estás seguro de que quieres eliminar la contraseña de '{servicio}'? (s/n): ").lower()
+            if confirm == 's':
+                del contrasenas[id_a_eliminar]
+                guardar_datos(contrasenas, clave)
+                print("¡Contraseña eliminada con éxito!")
+            else:
+                print("Operación cancelada.")
+        elif seleccion != 0:
+            print("Selección no válida.")
+    except ValueError:
+        print("Entrada no válida. Por favor, ingresa un número.")
+    input("\nPresiona Enter para continuar...")
+
+def cambiar_contrasena_maestra():
+    print("\n--- CAMBIAR CONTRASEÑA MAESTRA ---")
+    print("Función aún no implementada.")
+    input("\nPresiona Enter para continuar...")
+
+def main():
+    if not os.path.exists(ARCHIVO_HASH_MAESTRA):
+        configurar_contrasena_maestra()
+        print("\nGestor de contraseñas inicializado. Vuelve a ejecutar el programa para usarlo.")
+        return
+
+    clave = iniciar_sesion()
+
+    if clave:
+        contrasenas = cargar_datos(clave)
+        if contrasenas is None:
+            return
+
+        while True:
+            mostrar_menu_principal()
+            opcion = input("Selecciona una opción (1-6): ")
+
+            if opcion == '1':
+                agregar_contrasena(contrasenas, clave)
+            elif opcion == '2':
+                listar_contrasenas(contrasenas)
+            elif opcion == '3':
+                buscar_contrasena(contrasenas)
+            elif opcion == '4':
+                eliminar_contrasena(contrasenas, clave)
+            elif opcion == '5':
+                cambiar_contrasena_maestra()
+            elif opcion == '6':
+                print("Saliendo... ¡Hasta pronto!")
+                break
+            else:
+                print("Opción no válida. Inténtalo de nuevo.")
+                input("\nPresiona Enter para continuar...")
+
+if __name__ == "__main__":
+    main()
