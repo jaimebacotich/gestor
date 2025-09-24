@@ -188,7 +188,65 @@ def eliminar_contrasena(contrasenas: dict, clave: bytes):
 
 def cambiar_contrasena_maestra():
     print("\n--- CAMBIAR CONTRASEÑA MAESTRA ---")
-    print("Función aún no implementada.")
+    
+    # Verificar la contraseña maestra actual
+    print("Para cambiar la contraseña maestra, primero debes ingresar la actual.")
+    contrasena_maestra_actual = getpass.getpass("Contraseña Maestra Actual: ")
+    
+    try:
+        with open(ARCHIVO_HASH_MAESTRA, "r") as f:
+            hash_guardado = f.read()
+    except FileNotFoundError:
+        print("Error: No se encontró el archivo de configuración principal. No se puede proceder.")
+        input("\nPresiona Enter para continuar...")
+        return
+        
+    if hashlib.sha256(contrasena_maestra_actual.encode()).hexdigest() != hash_guardado:
+        print("Contraseña Maestra incorrecta.")
+        input("\nPresiona Enter para continuar...")
+        return
+
+    # Cargar el salt actual para derivar la clave de descifrado
+    try:
+        salt_viejo = cargar_salt()
+    except FileNotFoundError:
+        print("Error: No se encontró el archivo salt. Los datos pueden estar corruptos.")
+        input("\nPresiona Enter para continuar...")
+        return
+
+    clave_vieja = derivar_clave(contrasena_maestra_actual, salt_viejo)
+
+    # Cargar y descifrar los datos existentes
+    contrasenas = cargar_datos(clave_vieja)
+    if contrasenas is None:
+        print("No se pudieron cargar los datos para re-cifrarlos. Abortando.")
+        input("\nPresiona Enter para continuar...")
+        return
+
+    # Pedir la nueva contraseña maestra
+    print("\nAhora, crea tu nueva Contraseña Maestra.")
+    while True:
+        nueva_contrasena = getpass.getpass("Nueva Contraseña Maestra: ")
+        confirmacion = getpass.getpass("Confirma la Nueva Contraseña Maestra: ")
+        if nueva_contrasena and nueva_contrasena == confirmacion:
+            # Generar nuevo hash y nuevo salt
+            nuevo_hash = hashlib.sha256(nueva_contrasena.encode()).hexdigest()
+            with open(ARCHIVO_HASH_MAESTRA, "w") as f:
+                f.write(nuevo_hash)
+
+            # Generar y guardar un nuevo salt para la nueva clave
+            nuevo_salt = generar_y_guardar_salt()
+            
+            # Derivar la nueva clave y re-cifrar los datos
+            nueva_clave = derivar_clave(nueva_contrasena, nuevo_salt)
+            
+            guardar_datos(contrasenas, nueva_clave)
+            
+            print("\n¡Contraseña Maestra cambiada con éxito!")
+            break
+        else:
+            print("\nLas nuevas contraseñas no coinciden o están vacías. Inténtalo de nuevo.")
+            
     input("\nPresiona Enter para continuar...")
 
 def main():
