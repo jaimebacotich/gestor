@@ -1,1 +1,6 @@
+# Archivo de contraseñas cifradas
+contrasenas.json.cifrado
 
+# Archivos de caché de Python
+__pycache__/
+*.pyc
